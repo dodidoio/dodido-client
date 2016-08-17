@@ -1,6 +1,3 @@
 node_modules
-docs/fonts
-docs/scripts
-docs/*.html
-docs/styles
+docs/*.js.html
 *.bat
