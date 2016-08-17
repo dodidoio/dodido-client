@@ -1,0 +1,27 @@
+{
+  "name": "dodido-client",
+  "version": "1.0.0",
+  "description": "Connect with the Dodido server",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "dependencies": {
+    "engine.io-client": "^1.6.11",
+    "underscore": "^1.8.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "bot",
+    "bots",
+    "dodido",
+    "bot",
+    "platform"
+  ],
+  "author": "Elchanan Shor",
+  "license": " MPL-2.0"
+}
