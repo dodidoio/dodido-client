@@ -1,4 +1,3 @@
 node_modules
 docs/*.js.html
 *.bat
-test/config.json

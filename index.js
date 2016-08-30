@@ -1,10 +1,7 @@
 //dodido client
 
 /* jshint node:true */
-const _ = require('underscore');
-const EventEmitter = require('events');
-//const EventEmitter = require('promise-events');
-
+var _ = require('underscore');
 var socket = null;
 var frames = {};
 var gurl = null;
@@ -26,58 +23,38 @@ var frameid = 0;
  * @fires closed
  */
 function connect(url,token){
-	var ret = new Promise(function(resolve,reject){
-		url += "?client=some-client-uuid";
-		gurl = token? url+ "&key="+token : url;
-		socket = require('engine.io-client')(gurl);
-		socket.on('open', function(){
-			socket.on('message', function(data){
-				//console.log("got message",data);
-				reportMessage(data);
+	var ret = new EventEmitter();
+	gurl = token? url+"?key="+token : url;
+	socket = require('engine.io-client')(gurl);
+	socket.on('open', function(){
+		socket.on('message', function(data){reportMessage(data);});
+		socket.on('close', function(){
+			socket = null;
+			ret.emit('closed');
 			});
-			socket.on('disconnect', function(){
-				socket = null;
-				ret.emit('closed');
-				});
-			setImmediate(function(){ret.emit('opened');});
-			resolve();
 		});
-	});
-	_.extend(ret,EventEmitter.prototype);
+		ret.emit('opened');
 	return ret;
 }
 
-/**
- * Signin to the server after connecting without a token. This function connects to the server with specified userid
- * and emits a token that can be used in subsequent calls.
- * @param   {string}  username the user name
- * @param   {string}  pswd     the user password
- * @returns {Promise} an event emitter promise
- * @fires token 
- */
-function signin(username,pswd){
-	console.log("signin",username,pswd);
-	return dispatch('sign in userid [] pswd []',[username,pswd]);
-}
 
 /**
- * Pass a text request from the user to the Dodido server. The cid argument is a unique identification of the
+ * Pass a text request from the user to the Dodido server. The cid argument is some unique identification of the
  * conversation. This is used to store the context of the conversation. It can be the bot userid if each 
- * @param   {Object}  input           an object containing request data
+ * @param   {string}  userid          the end user id
+ * @param   {string}  ownertoken      the token of the bot owner
+ * @param   {string}  cid             conversation id - this is some string id used to keep context of the 
+ *                                    conversation. It should be unique per bot owner
+ * @param   {Object}  input           an object containing request information
  * @param   {string}  input.input     the request text
  * @param   {Array}   input.options   an array of possible request texts. This can be used when using
- *                                    voice recognition when several possible interpretations are possible
- * @param   {string}  input.expecting the expected parse type. By default this is 'action' - meaning an action the bot 
- *                                    should take in response to a request. 
+ *                                    voice recognition and several possible interpretations are possible
+ * @param   {string}  input.expecting the expected parse type. By default this is 'action' - meaning an
+ *                                    action the bot should take in response to a request. 
  * @param   {Array}   input.packages  an array of package names to use when processing the request
- * @param   {string}  cid             conversation id - this is a string id used to keep context of the 
- *                                    conversation. It should be unique per userid. If a single userid manages several
- *                                    bots, the cid should be prefixed with the full name of the bot
- * @param   {boolean} isParsed        true if the request text is  a parsed request returned in the options transcript.
+ * @param   {boolean} isTranscript    true if the request text is  a parsed request returned in the options transcript.
  *                                    If the request is parsed, the request function bypasses the parser and executes
- *                                    the request immediately. The parsed format already includes the binding spec
- * @param   {string}  userid          the end user id (optional)
- * @param   {string}  ownertoken      the token of the bot owner (optional)
+ *                                    the request immediately.
  * @returns {Promise} an event emitter promise
  * @fires say
  * @fires options
@@ -97,7 +74,7 @@ function signin(username,pswd){
  *   	console.error(message);
  *    });
  */
-function request(input,cid,isParsed,userid, ownertoken){
+function request(userid, ownertoken,cid,input,isParsed){
 	return dispatch("run script [] as [] with cid []",[input,isParsed? 'parsed' : 'text',cid],{
 		'the user id':userid,
 		'the Key':ownertoken
@@ -105,20 +82,12 @@ function request(input,cid,isParsed,userid, ownertoken){
 }
 
 /**
- * Get the userid.
- * @returns {Promise} and event emitter promise
- * @fires userid
- */
-function whoami(){
-	return dispatch("whoami",[],{});
-}
-/**
  * Answer a question the user was asked. This call should reference a previously received {@link event:ask}.
+ * @param   {string}  userid    the end user id
+ * @param   {string}  ownertoken the bot token
  * @param   {string}  qid       question id as received by {@link event:ask}
- * @param   {Object}  response  a response object in the form of {@link request} input parameter
  * @param   {string}  expecting the expected type as received by {@link event:ask}
- * @param   {string}  userid    the end user id (optional)
- * @param   {string}  ownertoken the bot token (optional)
+ * @param   {Object}  response  a response object in the form of {@link request} input parameter
  * @returns {Promise} an event emitter promise
  * @fires options
  * @fires error
@@ -126,7 +95,7 @@ function whoami(){
  * @fires error
  
  */
-function answer(quid,response,expecting,userid,ownertoken){
+function answer(userid,ownertoken,qid,expecting,response){
 	return dispatch('answer question [] with response [] expecting []',[qid,response,expecting],{
 		'the user id':userid,
 		'the key':ownertoken
@@ -141,7 +110,7 @@ function answer(quid,response,expecting,userid,ownertoken){
  * @fires error
  */
 function saveFile(name,body){
-	return dispatch("saveFile",[name,body]);
+	return null;
 }
 
 /**
@@ -151,17 +120,17 @@ function saveFile(name,body){
  * @fires error
  */
 function deleteFile(name){
-	return dispatch("deleteFile",[name]);
+	return null;
 }
 
 /**
- * Delete a definition manifest from the server. If the manifest does not exist, no erro rmessage is returned
+ * Delete a definition manifest from the server
  * @param   {string}  name mafniest name
  * @returns {Promise} an event emitter promise object
  * @fires error
  */
 function deleteManifest(name){
-	return dispatch("deleteManifest",[name]);
+	return null;
 }
 
 /**
@@ -173,7 +142,7 @@ function deleteManifest(name){
  * @fires error
  */
 function saveManifest(name,body,type){
-	return dispatch("saveManifest",[name,body]);
+	return null;
 }
 
 
@@ -197,7 +166,7 @@ function disconnect(){
  * @private
  */
 function dispatch(message,args,context){
-	var id = ++frameid;
+	var id = frameid++;
 	var promise = new Promise(function(resolve,reject){
 		frames[id] = {promise:promise,resolve:resolve,reject:reject};
 		var out = `[${id},${JSON.stringify(message)}, ${JSON.stringify(args)}`;
@@ -218,8 +187,6 @@ function dispatch(message,args,context){
 			});
 		}
 	});
-	//need to set the promise. When the resolve and reject were set, the promise did not exists yet
-	frames[id].promise = promise;
 	_.extend(promise,EventEmitter.prototype);
 	return promise;
 }
@@ -244,14 +211,12 @@ function reportMessage(data){
 	if(frames[parsed[0]]){
 		if(parsed.length === 1){
 			//receiving a message array of length 1 is an end message - finished processing
-			let id = Number.parseInt(parsed[0]);
-			frames[id].promise.emit('end');
-			frames[id].resolve();
+			frames[parsed[0]].promise.emit('end');
+			frames[parsed[0]].resolve();
 			delete frames[parsed[0]];
 		}else{
 			var message = EventMap[parsed[1]] || parsed[1];
-			let id = Number.parseInt(parsed[0]);
-			frames[id].promise.emit.apply(frames[id].promise,[message].concat(parsed[2] || []));
+			frames[parsed[0]].promise.emit.apply(promise,[message].concat(parsed[2] || []));
 		}
 	}else{
 		console.error("Received message after completion",data);
@@ -355,7 +320,7 @@ EventMap ={
 	*                                    This should be passed on to subsequent 'request' calls
 	* @param {string} options.text the request interpretation in plain text format
 	*/
-	'possible rewrites are []' : 'options',
+	'possible rewrites are X' : 'options',
 	
 	/**
 	* When the server is waiting for an answer to a question, timeup event is fired when the server is no longer
@@ -374,31 +339,13 @@ EventMap ={
 	* The connection to the Dodido server was closed
 	* @event closed
 	*/
-	'closed' : 'closed',
-	
-	/**
-	* In response to the whoami request, return the userid
-	* @event userid
-	*/
-	'userid is []' : 'userid',
-	
-	/**
-	* The user token - used when connecting with username/password - fires a generated token
-	* @event token
-	*/
-	'key []' : 'token'
+	'closed' : 'closed'
 };
 
 module.exports = {
 	connect : connect,
-	signin : signin,
-	whoami : whoami,
 	disconnect:disconnect,
 	request : request,
-	answer : answer,
-	saveFile : saveFile,
-	deleteFile : deleteFile,
-	saveManifest : saveManifest,
-	deleteManifest : deleteManifest
+	answer : answer
 };
 
