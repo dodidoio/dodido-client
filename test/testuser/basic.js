@@ -3,5 +3,12 @@ module.exports = {
 		dodido.log("in helloWorld");
 		dodido.say("Hello to you to");
 		dodido.say("Great talking to you");
+	},
+	askName : function(frame){
+		return frame.ask('What is yours?','text').then((name)=>{
+			frame.say("nice meeting you " + name + ". My name is dodido");
+		}).catch((err)=>{
+			frame.error("got error in askName");
+		});
 	}
 };

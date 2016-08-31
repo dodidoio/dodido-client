@@ -24,6 +24,36 @@ t.test('save file',function(t){
 		}).catch(t.threw);
 	});
 }).then(function(){
+	var promise = new Promise(function(resolve,reject){
+		setTimeout(resolve,5000);
+	});
+	return promise;
+}).then(function(){
+	return t.test('ensure loaded files are working correctly',(t)=>{
+		t.plan(2);
+		return c.request({
+			input: "hello world",
+			packages : [config.username + "/basic"]
+		}).once('say',function(text){
+			t.equal(text,"Hello to you to");
+		}).on('log',function(text){
+			t.equal(text,"in helloWorld");
+		});
+	});
+}).then(function(){
+		return t.test('ask a question',(t)=>{
+			return c.request({
+				input: "what is your name",
+				packages : [config.username + "/basic"]
+			}).once('ask',function(message,id,description,expecting){
+				t.equal(message,"What is yours?","ask message incorrect");
+				t.equal(expecting,"text","ask type incorrect");
+				c.answer(id,"funny name",expecting);
+			}).on('say',function(text){
+				t.equal(text,"nice meeting you funny name. My name is dodido","say after answer incorrect");
+		});
+	});
+	}).then(function(){
 	return t.test('delete manifest',function(t){
 		t.plan(1);
 		return c.deleteManifest("basic.dic").on('error',function(error){

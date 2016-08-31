@@ -1,3 +1,4 @@
 [
-	{"pattern":"hello world","type":"action","bind":"helloWorld@dodido/basic"}
+	{"pattern":"hello world","type":"action","bind":"helloWorld@test2/basic"},
+	{"pattern":"what is your name","type":"action","bind":"askName@test2/basic"}
 ]
