@@ -32,7 +32,6 @@ function connect(url,token){
 		socket = require('engine.io-client')(gurl);
 		socket.on('open', function(){
 			socket.on('message', function(data){
-				//console.log("got message",data);
 				reportMessage(data);
 			});
 			socket.on('disconnect', function(){
@@ -56,7 +55,6 @@ function connect(url,token){
  * @fires token 
  */
 function signin(username,pswd){
-	console.log("signin",username,pswd);
 	return dispatch('sign in userid [] pswd []',[username,pswd]);
 }
 
@@ -115,10 +113,8 @@ function whoami(){
 /**
  * Answer a question the user was asked. This call should reference a previously received {@link event:ask}.
  * @param   {string}  qid       question id as received by {@link event:ask}
- * @param   {Object}  response  a response object in the form of {@link request} input parameter
- * @param   {string}  expecting the expected type as received by {@link event:ask}
- * @param   {string}  userid    the end user id (optional)
- * @param   {string}  ownertoken the bot token (optional)
+ * @param   {Object}  response  a response object in the form of {@link request} input parameter or plain text
+ * @param   {string}  expecting the expected type as received by {@link event:ask} - default "text"
  * @returns {Promise} an event emitter promise
  * @fires options
  * @fires error
@@ -126,11 +122,15 @@ function whoami(){
  * @fires error
  
  */
-function answer(quid,response,expecting,userid,ownertoken){
-	return dispatch('answer question [] with response [] expecting []',[qid,response,expecting],{
-		'the user id':userid,
-		'the key':ownertoken
-	});
+function answer(qid,response,expecting){
+	if(typeof response === "string"){
+		return dispatch('answer question [] with response [] expecting []',[qid,{
+			input:response,
+			expecting: "text",
+		},"text"],{});
+	}else{
+		return dispatch('answer question [] with response [] expecting []',[qid,response,expecting]);
+	}
 }
 
 /**
