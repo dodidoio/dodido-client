@@ -1,6 +1,6 @@
 {
   "name": "dodido-client",
-  "version": "1.0.0",
+  "version": "0.1.1",
   "description": "Connect with the Dodido server",
   "main": "index.js",
   "directories": {
@@ -11,9 +11,11 @@
     "engine.io-client": "^1.6.11",
     "underscore": "^1.8.3"
   },
-  "devDependencies": {},
+  "devDependencies": {
+		"tap":"^7.0.0"
+	},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tap test/*.js"
   },
   "keywords": [
     "bot",
