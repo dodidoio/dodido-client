@@ -18,8 +18,9 @@ var frameid = 0;
 
 /**
  * Connect to the Dodido server
- * @param   {string}  url   the server url (e.g. https://dodido.io)
- * @param   {string}  token the token used to access the server
+ * @param   {string}  url   the server url (e.g. wss://assist.dodido.io)
+ * @param   {string}  token the token used to access the server. It is possible to connect without a token
+ *                          but a {@link signin} is required before performing any actions
  * @returns {Promise} a promise resolved when the connection is successfule. The promise is rejected if the connection
  *                    fails with an error message
  * @fires opened
@@ -30,6 +31,10 @@ function connect(url,token){
 		url += "?client=some-client-uuid";
 		gurl = token? url+ "&key="+token : url;
 		socket = require('engine.io-client')(gurl);
+		socket.on('error',function(err){
+			console.log("Error - ",err);
+			reject(err);
+		});
 		socket.on('open', function(){
 			socket.on('message', function(data){
 				reportMessage(data);
@@ -59,51 +64,75 @@ function signin(username,pswd){
 }
 
 /**
- * Pass a text request from the user to the Dodido server. The cid argument is a unique identification of the
- * conversation. This is used to store the context of the conversation. It can be the bot userid if each 
+ * Pass a text request from the user to the Dodido server. The server parses the request and translates
+ * it into an intermediary format that can be converted into a computer program. If only one request
+ * interpretaion exists, it executes it. Otherwise, it fires an {@link event:options} event with the possible interpretations. The
+ * bot communicates with the user by emitting events that should be handled by the API user.
  * @param   {Object}  input           an object containing request data
  * @param   {string}  input.input     the request text
  * @param   {Array}   input.options   an array of possible request texts. This can be used when using
- *                                    voice recognition when several possible interpretations are possible
+ *                                  voice recognition and several possible interpretations are possible
  * @param   {string}  input.expecting the expected parse type. By default this is 'action' - meaning an action the bot 
- *                                    should take in response to a request. 
- * @param   {Array}   input.packages  an array of package names to use when processing the request
+ *                                  should take in response to a request. 
+ * @param   {Array}   input.packages  an array of package names to use when processing the request. The parser looks
+ *                                  for definitions contained in these packages
  * @param   {string}  cid             conversation id - this is a string id used to keep context of the 
- *                                    conversation. It should be unique per userid. If a single userid manages several
- *                                    bots, the cid should be prefixed with the full name of the bot
+ *                                  conversation. It should be unique per userid. If a single userid manages several
+ *                                  bots, the cid should be prefixed with the full name of the bot
  * @param   {boolean} isParsed        true if the request text is  a parsed request returned in the options transcript.
- *                                    If the request is parsed, the request function bypasses the parser and executes
- *                                    the request immediately. The parsed format already includes the binding spec
- * @param   {string}  userid          the end user id (optional)
- * @param   {string}  ownertoken      the token of the bot owner (optional)
+ *                                  For regular text requests, this should be false. If the request is parsed, the 
+ *                                  request function bypasses the parser and executes the request immediately. The
+ *                                  parsed format is a text string containing the binding of the request 
+ *                                  interpretation to javascript code 
+ * @param   {Object}  context         The context of the request. Each property name is a name of a context object that
+ *                                  may be used by the bot code. This should include data such as userid and other
+ *                                  data that may be needed by the bot code.
  * @returns {Promise} an event emitter promise
  * @fires say
  * @fires options
  * @fires ask
+ * @fires show
  * @fires log
- * @fires error
  * @fires progress
  * @fires error
  * @fires fail
  * @fires upload
  * @example
  * var client = require('dodido-client');
- * client.request('myuser','bot owner token','some-conversation-id',{input:'hello world'})
- * 	.on('say',function(message){
+ * client.connect('wss://assist.dodido.io','some-token').then(()=>{
+ * 	return request({input:'hello world'},'some-conversation-id',false,{userid:'the userid'})
+ * 	.on('say',(message)=>{
  *  	console.log(message);
- *   }).on('error',function(message){
+ *   }).on('error',(message)=>{
  *   	console.error(message);
  *    });
+ * });
  */
-function request(input,cid,isParsed,userid, ownertoken){
-	return dispatch("run script [] as [] with cid []",[input,isParsed? 'parsed' : 'text',cid],{
-		'the user id':userid,
-		'the Key':ownertoken
-	});
+function request(input,cid,isParsed,context){
+	return dispatch("run script [] as [] with cid []",[input,isParsed? 'parsed' : 'text',cid],context);
 }
 
 /**
- * Get the userid.
+ * Call a handler function. The handler is a function that is defined as part of the human-computer dictionary.
+ * When the handler function returns a promise, this function returns after the promise is resolved. Otherwise,
+ * the callHandler function is resolved immediately after calling the handler function. This function works
+ * similarly to the {}
+ * @param   {string}   handler a bind spec in the format functionName@owner/package
+ * @param   {string}   cid     context id. The context may be used by the handler code
+ * @param   {Object}   context a context object passed to the handler function
+ * @returns {[[Type]]} [[Description]]
+ * @fires say
+ * @fires ask
+ * @fires show
+ * @fires log
+ * @fires error
+ * @fires upload
+ */
+function callHandler(handler,cid,context){
+	return dispatch("run script [] as [] with cid []",[`handler(${handler})`,'parsed',cid],context);
+}
+/**
+ * Get the currently connected userid.
  * @returns {Promise} and event emitter promise
  * @fires userid
  */
@@ -119,7 +148,6 @@ function whoami(){
  * @fires options
  * @fires error
  * @fires timeup
- * @fires error
  
  */
 function answer(qid,response,expecting){
@@ -155,7 +183,7 @@ function deleteFile(name){
 }
 
 /**
- * Delete a definition manifest from the server. If the manifest does not exist, no erro rmessage is returned
+ * Delete a definition manifest from the server. If the manifest does not exist, no error message is returned
  * @param   {string}  name mafniest name
  * @returns {Promise} an event emitter promise object
  * @fires error
@@ -172,7 +200,7 @@ function deleteManifest(name){
  * @param {Object}   body a JSON manifest object
  * @fires error
  */
-function saveManifest(name,body,type){
+function saveManifest(name,body){
 	return dispatch("saveManifest",[name,body]);
 }
 
@@ -185,97 +213,6 @@ function disconnect(){
 		socket.close();
 	}
 	socket = null;
-}
-
-/**
- * Dispatch an action to the dodido server. This functions activates an action on the dodido server and
- * returns an event emitter promise. The returned promise can be listened on using the 'on' function
- * @param   {string}  message the action to envoke
- * @param   {Array}   args    an array of action arguments
- * @param   {Object}   context object - use format "the user" for tag values an just name for name values
- * @returns {Promise} an even emitter promise
- * @private
- */
-function dispatch(message,args,context){
-	var id = ++frameid;
-	var promise = new Promise(function(resolve,reject){
-		frames[id] = {promise:promise,resolve:resolve,reject:reject};
-		var out = `[${id},${JSON.stringify(message)}, ${JSON.stringify(args)}`;
-		if(context){
-			out += ("," + JSON.stringify(context));
-		}
-		out += "]";
-		if(socket){
-			socket.send(out);
-		}else{
-			if(!gurl){
-				promise.emit('error','Connection to server was not initialized');
-				reject('Connection to server was not initialized');
-				return;
-			}
-			connect(gurl).then(function(){
-				socket.send(out);
-			});
-		}
-	});
-	//need to set the promise. When the resolve and reject were set, the promise did not exists yet
-	frames[id].promise = promise;
-	_.extend(promise,EventEmitter.prototype);
-	return promise;
-}
-
-/**
- * Emit an even received from the server via websocket to the corresponding action promise.
- * @param {string} data string that should be parsed as a JSON array. The array may contain up to 3 elements
- *                      <ol>the request id
- *                      <ol>event name. If only the the array contains only one element then the message is treated
- *                      as an END event.
- *                      <ol>an array with event arguments
- * @private
- */
-function reportMessage(data){
-	var parsed = {};
-	try{
-		parsed = JSON.parse(data);
-	}catch(e){
-		console.error("Error - parsing message from server - ",e,data);
-		return;
-	}
-	if(frames[parsed[0]]){
-		if(parsed.length === 1){
-			//receiving a message array of length 1 is an end message - finished processing
-			let id = Number.parseInt(parsed[0]);
-			frames[id].promise.emit('end');
-			frames[id].resolve();
-			delete frames[parsed[0]];
-		}else{
-			var message = EventMap[parsed[1]] || parsed[1];
-			let id = Number.parseInt(parsed[0]);
-			frames[id].promise.emit.apply(frames[id].promise,[message].concat(parsed[2] || []));
-		}
-	}else{
-		console.error("Received message after completion",data);
-	}
-}
-
-/**
- * Kill all user requests that are currently running
- * @param {string} userkey user key
- * @private
- */
-function killUser(userkey){
-	var out = `[0,"kill",["${userkey}"]]`;
-	if(socket){
-		socket.send(out);
-	}else{
-		if(!gurl){
-			console.error("url was not defined. Cannot kill user");
-			return;
-		}
-		connect(gurl).then(function(){
-			socket.send(out);
-		});
-	}
 }
 
 EventMap ={
@@ -295,6 +232,14 @@ EventMap ={
 	*/
 	'say []' : 'say',
 	
+	/**
+	* Show a widget in the messaging platform UI. The format of the widget definition may depend on the messaging
+	* platform.
+	* @event show
+	* @param {string}  type the widget type (e.g. 'table' or 'facebook' for passing directly to Facebook messenger)
+	* @param {Object}  body a JSON object with the data to display in the widget specialised format
+	*/
+	'show' : 'show',
 	/**
 	* Ask the user a question. The message should be sent to the user as a question (if relevant for the platform).
 	* The id and expecting fields should be stored in the conversation state so the next request will be treated
@@ -389,12 +334,109 @@ EventMap ={
 	'key []' : 'token'
 };
 
+///////////////////////////////////////////////////////////////////////////////
+// private functions
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Dispatch an action to the dodido server. This functions activates an action on the dodido server and
+ * returns an event emitter promise. The returned promise can be listened on using the 'on' function
+ * @param   {string}  message the action to envoke
+ * @param   {Array}   args    an array of action arguments
+ * @param   {Object}   context object - use format "the user" for tag values an just name for name values
+ * @returns {Promise} an even emitter promise
+ * @private
+ */
+function dispatch(message,args,context){
+	var id = ++frameid;
+	var promise = new Promise(function(resolve,reject){
+		frames[id] = {promise:promise,resolve:resolve,reject:reject};
+		var out = `[${id},${JSON.stringify(message)}, ${JSON.stringify(args)}`;
+		if(context){
+			out += ("," + JSON.stringify(context));
+		}
+		out += "]";
+		if(socket){
+			socket.send(out);
+		}else{
+			if(!gurl){
+				promise.emit('error','Connection to server was not initialized');
+				reject('Connection to server was not initialized');
+				return;
+			}
+			connect(gurl).then(function(){
+				socket.send(out);
+			});
+		}
+	});
+	//need to set the promise. When the resolve and reject were set, the promise did not exists yet
+	frames[id].promise = promise;
+	_.extend(promise,EventEmitter.prototype);
+	return promise;
+}
+
+/**
+ * Emit an even received from the server via websocket to the corresponding action promise.
+ * @param {string} data string that should be parsed as a JSON array. The array may contain up to 3 elements
+ *                      <ol>the request id
+ *                      <ol>event name. If only the the array contains only one element then the message is treated
+ *                      as an END event.
+ *                      <ol>an array with event arguments
+ * @private
+ */
+function reportMessage(data){
+	var parsed = {};
+	try{
+		parsed = JSON.parse(data);
+	}catch(e){
+		console.error("Error - parsing message from server - ",e,data);
+		return;
+	}
+	if(frames[parsed[0]]){
+		if(parsed.length === 1){
+			//receiving a message array of length 1 is an end message - finished processing
+			let id = Number.parseInt(parsed[0]);
+			frames[id].promise.emit('end');
+			frames[id].resolve();
+			delete frames[parsed[0]];
+		}else{
+			var message = EventMap[parsed[1]] || parsed[1];
+			let id = Number.parseInt(parsed[0]);
+			frames[id].promise.emit.apply(frames[id].promise,[message].concat(parsed[2] || []));
+		}
+	}else{
+		console.error("Received message after completion",data);
+	}
+}
+
+/**
+ * Kill all user requests that are currently running
+ * @param {string} userkey user key
+ * @private
+ */
+function killUser(userkey){
+	var out = `[0,"kill",["${userkey}"]]`;
+	if(socket){
+		socket.send(out);
+	}else{
+		if(!gurl){
+			console.error("url was not defined. Cannot kill user");
+			return;
+		}
+		connect(gurl).then(function(){
+			socket.send(out);
+		});
+	}
+}
+
+
 module.exports = {
 	connect : connect,
 	signin : signin,
 	whoami : whoami,
 	disconnect:disconnect,
 	request : request,
+	callHandler : callHandler,
 	answer : answer,
 	saveFile : saveFile,
 	deleteFile : deleteFile,
