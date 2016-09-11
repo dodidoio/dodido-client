@@ -32,7 +32,10 @@ function connect(url,token){
 		gurl = token? url+ "&key="+token : url;
 		socket = require('engine.io-client')(gurl);
 		socket.on('error',function(err){
-			console.log("Error - ",err);
+			if(err.description === 503){
+				reject('Error connecting to the server - check format of the server url');
+				return;
+			}
 			reject(err);
 		});
 		socket.on('open', function(){
