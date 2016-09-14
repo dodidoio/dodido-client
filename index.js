@@ -72,9 +72,9 @@ function signin(username,pswd){
  * interpretaion exists, it executes it. Otherwise, it fires an {@link event:options} event with the possible interpretations. The
  * bot communicates with the user by emitting events that should be handled by the API user.
  * @param   {Object}  input           an object containing request data
- * @param   {string}  input.input     the request text
- * @param   {Array}   input.options   an array of possible request texts. This can be used when using
- *                                  voice recognition and several possible interpretations are possible
+ * @param   {string}  input.input     the request text or an array of possible request text. The array option can
+ *                                    be used with voice input when there are several possible transcripts. The
+ *                                    text element in the array gets precedence over the rest.
  * @param   {string}  input.expecting the expected parse type. By default this is 'action' - meaning an action the bot 
  *                                  should take in response to a request. 
  * @param   {Array}   input.packages  an array of package names to use when processing the request. The parser looks
@@ -112,7 +112,14 @@ function signin(username,pswd){
  * });
  */
 function request(input,cid,isParsed,context){
-	return dispatch("run script [] as [] with cid []",[input,isParsed? 'parsed' : 'text',cid],context);
+	var ret = dispatch("run script [] as [] with cid []",[input,isParsed? 'parsed' : 'text',cid],context);
+	ret.on('error [] parsing file [] at []',(err,filename,pos)=>{
+		ret.emit('error',`Error processing the request - ${err} at ${filename}:${pos}`);
+	});
+	ret.on('error [] with message []',(err,message)=>{
+		ret.emit('error',`Error ${err}: ${message}`);
+	});
+	return ret;
 }
 
 /**
