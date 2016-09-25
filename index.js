@@ -117,7 +117,7 @@ function request(input,cid,isParsed,context){
 		ret.emit('error',`Error processing the request - ${err} at ${filename}:${pos}`);
 	});
 	ret.on('error [] with message []',(err,message)=>{
-		ret.emit('error',`Error ${err}: ${message}`);
+		ret.emit('error',`${message} (${err})`);
 	});
 	return ret;
 }
