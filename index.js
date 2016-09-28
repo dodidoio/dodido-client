@@ -123,14 +123,12 @@ function request(input,cid,isParsed,context){
 }
 
 /**
- * Call a handler function. The handler is a function that is defined as part of the human-computer dictionary.
- * When the handler function returns a promise, this function returns after the promise is resolved. Otherwise,
- * the callHandler function is resolved immediately after calling the handler function. This function works
- * similarly to the {}
- * @param   {string}   handler a bind spec in the format functionName@owner/package
- * @param   {string}   cid     context id. The context may be used by the handler code
- * @param   {Object}   context a context object passed to the handler function
- * @returns {[[Type]]} [[Description]]
+ * Call a handler function, passing it some data object. A handler is a function defined in the human-computer dictionary. The format should be functionName@user/module
+ * It uses the 'bind' format as specified in the human-computer dictionary reference. 
+ * @param   {string}  handler a bind spec in the format functionName@owner/package
+ * @param   {Object}  data    the data to pass to the handler function as its first argument
+ * @param   {string}  cid     context id. The context may be used by the handler code
+ * @returns {Promise} an event emitter promise
  * @fires say
  * @fires ask
  * @fires show
@@ -138,8 +136,8 @@ function request(input,cid,isParsed,context){
  * @fires error
  * @fires upload
  */
-function callHandler(handler,cid,context){
-	return dispatch("run script [] as [] with cid []",[`handler(${handler})`,'parsed',cid],context);
+function callHandler(handler,data,cid){
+	return dispatch("run script [] as [] with cid []",[`handler(${handler} it('data',frame))`,'parsed',cid],{'the data':data});
 }
 /**
  * Get the currently connected userid.
