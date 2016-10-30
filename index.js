@@ -105,7 +105,7 @@ function signin(username,pswd){
  * client.connect('wss://assist.dodido.io','some-token').then(()=>{
  * 	return request({input:'hello world'},'some-conversation-id',false,{userid:'the userid'})
  * 	.on('say',(message)=>{
- *  	console.log(message);
+ *  	console.info(message);
  *   }).on('error',(message)=>{
  *   	console.error(message);
  *    });
