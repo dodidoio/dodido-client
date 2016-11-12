@@ -4,7 +4,6 @@
   "description": "Connect with the Dodido server",
   "main": "index.js",
   "directories": {
-    "doc": "docs",
     "test": "test"
   },
   "dependencies": {
