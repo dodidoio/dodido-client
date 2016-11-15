@@ -79,6 +79,11 @@ function signin(username,pswd){
  *                                  should take in response to a request. 
  * @param   {Array}   input.packages  an array of package names to use when processing the request. The parser looks
  *                                  for definitions contained in these packages
+ * @param   {string}  input.token     iptional  dodido token - this is required when using user entities - data stored
+ *                                    on the server. Data is stored on the token owner account
+ * @param   {string}  input.userid    userid of the request. A single token owner may manage many userids. Each userid
+ *                                    has its own data space. If * is specified as userid, the requests uses the token
+ *                                    owner data space, shared among all users.
  * @param   {string}  cid             conversation id - this is a string id used to keep context of the 
  *                                  conversation. It should be unique per userid. If a single userid manages several
  *                                  bots, the cid should be prefixed with the full name of the bot
