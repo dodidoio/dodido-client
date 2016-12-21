@@ -1,6 +1,6 @@
 {
   "name": "dodido-client",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Connect with the Dodido server",
   "main": "index.js",
   "directories": {

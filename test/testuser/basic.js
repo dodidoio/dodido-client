@@ -5,7 +5,7 @@ module.exports = {
 		dodido.say("Great talking to you");
 	},
 	handler : function(data,d){
-		d.say(data);
+		d.say(data + d.getContextObject('test context'));
 	},
 	askName : function(frame){
 		return frame.ask('What is yours?','text').then((name)=>{
