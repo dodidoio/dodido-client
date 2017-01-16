@@ -28,12 +28,11 @@ var frameid = 0;
  */
 function connect(url,token){
 	var ret = new Promise(function(resolve,reject){
-		url += "?client=some-client-uuid";
-		gurl = token? url+ "&key="+token : url;
+		gurl = token? url+ "?key="+token : url;
 		socket = require('engine.io-client')(gurl);
 		socket.on('error',function(err){
 			if(err.description === 503){
-				reject('Error connecting to the server - check format of the server url');
+				reject('Error connecting to the server - ensure url is correct');
 				return;
 			}
 			reject(err);
@@ -46,6 +45,18 @@ function connect(url,token){
 				socket = null;
 				ret.emit('closed');
 				});
+			socket.on('close', function(had_error){
+				socket = null;
+				ret.emit('closed');
+			});
+			socket.on('error', function(err){
+				socket = null;
+				ret.emit('closed');
+			});
+			socket.on('timeout', function(err){
+				socket = null;
+				ret.emit('closed');
+			});
 			setImmediate(function(){ret.emit('opened');});
 			resolve();
 		});
