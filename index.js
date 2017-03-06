@@ -172,20 +172,21 @@ function whoami(){
  * @param   {string}  qid       question id as received by {@link event:ask}
  * @param   {Object}  response  a response object in the form of {@link request} input parameter or plain text
  * @param   {string}  expecting the expected type as received by {@link event:ask} - default "text"
+ * @param	{Object}  context   the context object
  * @returns {Promise} an event emitter promise
  * @fires options
  * @fires error
  * @fires timeup
  
  */
-function answer(qid,response,expecting){
+function answer(qid,response,expecting,context){
 	if(typeof response === "string"){
 		return dispatch('answer question [] with response [] expecting []',[qid,{
 			input:response,
-			expecting: "text",
-		},"text"],{});
+			expecting: expecting || "text",
+		},expecting || "text"],{});
 	}else{
-		return dispatch('answer question [] with response [] expecting []',[qid,response,expecting]);
+		return dispatch('answer',[qid,response,expecting,context],context);
 	}
 }
 
