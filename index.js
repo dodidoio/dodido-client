@@ -159,6 +159,11 @@ function callHandler(handler,data,cid, context){
 	c['the data'] = data;
 	return dispatch("run script [] as [] with cid []",[`handler(${handler} it('data',frame))`,'parsed',cid],c);
 }
+
+function log(ownerToken,type,userid,text){
+	return dispatch("log",[ownerToken,type,userid,text]);
+}
+
 /**
  * Get the currently connected userid.
  * @returns {Promise} and event emitter promise
@@ -199,6 +204,14 @@ function answer(qid,response,expecting,context){
  */
 function saveFile(name,body){
 	return dispatch("saveFile",[name,body]);
+}
+
+/**
+ * Show log messages of the token owner. Options specify filters on the log entries
+ * @param   {object} options an opject with filter options
+ */
+function showLogs(options){
+	return dispatch("showLog",[options]);
 }
 
 /**
@@ -470,6 +483,8 @@ module.exports = {
 	saveFile : saveFile,
 	deleteFile : deleteFile,
 	saveManifest : saveManifest,
-	deleteManifest : deleteManifest
+	deleteManifest : deleteManifest,
+	showLogs : showLogs,
+	log : log
 };
 
