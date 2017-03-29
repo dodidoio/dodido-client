@@ -402,8 +402,7 @@ function dispatch(message,args,context){
 			socket.send(out);
 		}else{
 			if(!gurl){
-				promise.emit('error','Connection to server was not initialized');
-				reject('Connection to server was not initialized');
+				reject(`Connection to server was not initialized. Message was not sent`);
 				return;
 			}
 			connect(gurl).then(function(){
